@@ -1,0 +1,5 @@
+<resources>
+    <string name="app_name">Reverie</string>
+    <string name="key_service_name">Reverie Home</string>
+    <string name="key_service_desc">Bottom button actions and page buttons as volume keys.</string>
+</resources>
