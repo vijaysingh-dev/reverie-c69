@@ -36,3 +36,6 @@ google-services.json
 
 # apksigner v4 signature files
 *.idsig
+
+# Python
+__pycache__/
