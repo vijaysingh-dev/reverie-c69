@@ -87,9 +87,25 @@ Changes take effect immediately.
 
 - **Folder:** put the files **directly** in `Pictures` (internal storage), not in a subfolder. Subfolders such as `Pictures/Screenshots` are ignored.
 - **Formats:** PNG, JPG/JPEG or BMP, under 10 MB each.
-- **Size:** the C69 screen is **758 × 1024** pixels in portrait. Images of exactly that size display edge to edge without scaling. Grayscale images look best on e-ink.
+- **Size:** the C69 screen is **758 × 1024** pixels in portrait. The easiest way to get there is the [conversion skill](#converting-images-with-an-ai-assistant). Images of exactly that size display edge to edge without scaling. Grayscale images look best on e-ink.
 - **Adding or removing images:** just copy or delete files. Reverie notices the change at the next wake and starts a fresh shuffle that includes new images.
 - **Replacing an image:** overwrite the file in `Pictures` with the same name. Onyx keeps its own copy of each image it has shown and displays that copy. Because Reverie hands Onyx files that already live in `Pictures`, overwriting there updates what you see.
+
+### Converting images with an AI assistant
+
+The [`skills/c69-wallpaper`](skills/c69-wallpaper) folder holds a ready-made skill that turns any image, or a folder of images, into C69 wallpapers:
+
+- 758 × 1024, 16-level grayscale, dithered for e-ink.
+- App badges, watermarks, usernames, "Posted in…" lines and screenshot UI removed. Images saved from the Reddit app have their badge bar removed automatically.
+- An optional caption under the picture, with a title and a credit.
+
+It takes two inputs: the **path** (a file or a folder) and whether to add a **label** (caption). The instructions in [`SKILL.md`](skills/c69-wallpaper/SKILL.md) are plain markdown and don't depend on any particular AI.
+
+- **Claude Code:** copy the `c69-wallpaper` folder to `~/.claude/skills/`, then ask: *"Convert ~/Pictures/new to C69 wallpapers, with labels."*
+- **ChatGPT, Gemini or any other assistant that can run code:** give it `SKILL.md` and `c69_wallpaper.py`, and ask: *"Follow SKILL.md with path = `<your images>` and label = yes."*
+- **Without AI:** run the script yourself, for example `python3 skills/c69-wallpaper/c69_wallpaper.py ~/Pictures/new --label --sheet`. Run it with `-h` for all options. It needs Python 3 and Pillow (`pip install pillow`).
+
+The results go to a `c69` folder next to your images. Copy them into the C69's `Pictures` folder.
 
 ---
 
@@ -220,6 +236,7 @@ src/local/boox/rotator/
   Actions.java               the actions a press can run
   SettingsActivity.java      the app screen: setup checklist and settings
   A11yKeeper.java            optional re-enable of Reverie Home (needs the adb grant)
+skills/c69-wallpaper/        AI-agnostic skill + script to convert images into C69 wallpapers
 tools_icons.py               icon generator
 ```
 
