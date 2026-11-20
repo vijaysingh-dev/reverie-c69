@@ -105,7 +105,7 @@ REDDIT_PAD = (228, 228, 228)
 
 
 def strip_flat_bands(im, tol=6):
-    """Remove the flat light-grey (228) letterbox rows the Reddit app adds above and below some
+    """Measure (rows at top, rows at bottom) of the flat light-grey (228) letterbox the Reddit app adds around some
     images. Only used after a Reddit badge was found; other flat colours belong to the artwork."""
     px = im.load()
     w, h = im.size
@@ -114,16 +114,29 @@ def strip_flat_bands(im, tol=6):
     def flat(y):
         return all(_close(px[x, y], REDDIT_PAD, tol) for x in xs)
 
+    def uniform(y):                      # blurred JPEG edge rows: one colour across, any shade
+        ref = px[w // 2, y]
+        return all(_close(px[x, y], ref, 24) for x in xs)
+
     top = 0
     while top < h * 0.25 and flat(top):
         top += 1
+    if top >= 3:
+        extra = 0
+        while extra < 8 and uniform(top):
+            top, extra = top + 1, extra + 1
+    else:
+        top = 0
     bottom = h
     while bottom > h * 0.75 and flat(bottom - 1):
         bottom -= 1
-    # a found band gets 2 extra rows: JPEG blurs the edge between padding and picture
-    top = 0 if top < 3 else top + 2
-    bottom = h if h - bottom < 3 else bottom - 2
-    return im.crop((0, top, w, bottom)) if (top or bottom != h) else im, top, h - bottom
+    if h - bottom >= 3:
+        extra = 0
+        while extra < 8 and uniform(bottom - 1):
+            bottom, extra = bottom - 1, extra + 1
+    else:
+        bottom = h
+    return top, h - bottom
 
 
 def erase_boxes(im, boxes):
@@ -154,15 +167,26 @@ def grid_preview(im, dest, step=100):
         g = g.resize((round(g.width * scale), round(g.height * scale)))
     d = ImageDraw.Draw(g)
     w, h = g.size
+    f = load_font(find_font(), 14)
+
+    def tag(xy, text, colour):          # label on a white box so it reads on any background
+        box = d.textbbox(xy, text, font=f)
+        d.rectangle([box[0] - 2, box[1] - 1, box[2] + 2, box[3] + 1], fill=(255, 255, 255))
+        d.text(xy, text, font=f, fill=colour)
+
     for v in range(0, max(im.size), step):
         p = round(v * scale)
         if v < im.width:
             d.line([(p, 0), (p, h)], fill=(255, 0, 0), width=1)
-            d.text((p + 2, 2), str(v), fill=(255, 0, 0))
         if v < im.height:
-            d.line([(0, p), (w, p)], fill=(0, 120, 255), width=1)
-            d.text((2, p + 2), str(v), fill=(0, 120, 255))
-    d.text((w - 140, h - 14), f"{im.width}x{im.height}", fill=(255, 0, 0))
+            d.line([(0, p), (w, p)], fill=(0, 90, 255), width=1)
+    for v in range(0, max(im.size), step):
+        p = round(v * scale)
+        if 0 < v < im.width:
+            tag((p + 3, 3), str(v), (200, 0, 0))
+        if 0 < v < im.height:
+            tag((3, p + 3), str(v), (0, 70, 220))
+    tag((w - 110, 3), f"{im.width}x{im.height}", (0, 0, 0))
     g.save(dest, quality=85)
 
 
@@ -268,9 +292,20 @@ def parse_crop(s):
         vals = [int(v) for v in s]
     else:
         vals = [int(v) for v in str(s).split(",")]
-    if len(vals) != 4:
-        raise ValueError("crop must be 4 numbers: top,right,bottom,left")
+    if len(vals) != 4 or any(v < 0 for v in vals):
+        raise ValueError("crop must be 4 non-negative numbers: top,right,bottom,left")
     return vals
+
+
+def check_box(box, size):
+    if len(box) != 4:
+        raise ValueError(f"erase box {box} must be [x0, y0, x1, y1]")
+    x0, y0, x1, y1 = (int(v) for v in box)
+    if x1 <= x0 or y1 <= y0:
+        raise ValueError(f"erase box {box}: x1 must be > x0 and y1 > y0")
+    if x0 >= size[0] or y0 >= size[1] or x1 <= 0 or y1 <= 0:
+        raise ValueError(f"erase box {box} is outside the {size[0]}x{size[1]} image")
+    return [x0, y0, x1, y1]
 
 
 def collect(path):
@@ -363,24 +398,34 @@ def main():
             print(f"SKIP  {base}: {e}")
             continue
         notes = []
-        # All manual coordinates refer to the ORIGINAL image (as in the --grid preview): erase, then crop.
-        boxes = meta.get("erase") or ([[int(v) for v in e.split(",")] for e in a.erase] if len(files) == 1 else [])
-        if boxes:
-            im = erase_boxes(im, boxes)
-            notes.append(f"erased {len(boxes)} box(es)")
-        crop = parse_crop(meta.get("crop")) or (parse_crop(a.crop) if len(files) == 1 else None)
-        if crop:
-            t, r, b, l = crop
-            im = im.crop((l, t, im.width - r, im.height - b))
-            notes.append(f"crop {t},{r},{b},{l}")
+        # Everything is measured on the ORIGINAL image (the --grid preview's coordinates):
+        # automatic Reddit removal and the manual crop are combined (the larger cut per edge wins),
+        # erase boxes are painted first, then the combined crop is applied once.
+        try:
+            boxes = meta.get("erase") or ([[int(v) for v in e.split(",")] for e in a.erase] if len(files) == 1 else [])
+            crop = parse_crop(meta.get("crop")) or (parse_crop(a.crop) if len(files) == 1 else None) or [0, 0, 0, 0]
+            boxes = [check_box(bx, im.size) for bx in boxes]
+        except ValueError as e:
+            print(f"SKIP  {base}: {e}")
+            continue
+        auto = [0, 0, 0, 0]
         if not a.keep_reddit:
             bh = reddit_badge_height(im)
             if bh:
-                im = im.crop((0, 0, im.width, im.height - bh))
-                notes.append(f"reddit badge -{bh}px")
-                im, t_cut, b_cut = strip_flat_bands(im)
-                if t_cut or b_cut:
-                    notes.append(f"reddit padding -{t_cut}px top/-{b_cut}px bottom")
+                pad_t, pad_b = strip_flat_bands(im.crop((0, 0, im.width, im.height - bh)))
+                auto = [pad_t, 0, bh + pad_b, 0]
+                notes.append(f"reddit badge -{bh}px" + (f", padding -{pad_t}px top/-{pad_b}px bottom" if pad_t or pad_b else ""))
+        if boxes:
+            im = erase_boxes(im, boxes)
+            notes.append(f"erased {len(boxes)} box(es)")
+        if any(crop):
+            notes.append("crop %d,%d,%d,%d" % tuple(crop))
+        t, r, b, l = (max(m, n) for m, n in zip(crop, auto))
+        if l + r >= im.width - 20 or t + b >= im.height - 20:
+            print(f"SKIP  {base}: crop leaves (almost) nothing of a {im.width}x{im.height} image")
+            continue
+        if t or r or b or l:
+            im = im.crop((l, t, im.width - r, im.height - b))
         if a.trim:
             before = im.size
             im = trim_uniform_border(im)

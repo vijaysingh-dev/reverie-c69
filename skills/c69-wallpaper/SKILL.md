@@ -16,7 +16,7 @@ Ask for these two if they weren't given:
 | **path** | One image file, or a folder of images. Folders are not searched recursively. Formats: PNG, JPG, WEBP, BMP, GIF (first frame), TIFF. |
 | **label** | **yes**: add a two-line caption under the picture (title, then a smaller grey credit). **no**: the picture fills the whole screen with no caption. |
 
-Optional: an output folder. The default is `<input folder>/c69/`. Keep your own temporary files (such as `labels.json`) outside both the image folder and the output folder.
+Optional: an output folder. The default is `<input folder>/c69/` (when the input is a folder, that subfolder is never read as input, so running again is safe). Keep your own temporary files (such as `labels.json`) outside both the image folder and the output folder.
 
 ## What the result must be
 
@@ -31,7 +31,7 @@ Optional: an output folder. The default is `<input folder>/c69/`. Keep your own 
 
 It needs Python 3.8+ and Pillow. Check with `python3 -c "import PIL"`; if that fails, install with `pip install pillow`. On Windows, use `py` instead of `python3`.
 
-Always run the script by its full path (for example `python3 /path/to/c69-wallpaper/c69_wallpaper.py ...`), so the commands work from any folder.
+Always run the script by its full path, so the commands work from any folder. In the commands below, `<script>` stands for that full path, for example `/home/me/reverie-c69/skills/c69-wallpaper/c69_wallpaper.py`.
 
 The script automatically removes the Reddit app's bottom badge bar (including a "Posted in r/..." line) and the flat light-grey padding the Reddit app adds above and below some images. Everything else is removed with per-image **crop** and **erase** instructions that you decide on in step 2.
 
@@ -40,7 +40,7 @@ The script automatically removes the Reddit app's bottom badge bar (including a 
 ### 1. Make grid previews
 
 ```
-python3 c69_wallpaper.py "<path>" --grid
+python3 "<script>" "<path>" --grid
 ```
 
 This writes a preview of every source image to `<output folder>/_grid/<file name>_<extension>.jpg`, overlaid with a labelled pixel grid (red numbers are x, blue numbers are y, a line every 100 px, in the original image's pixels). It also prints each image's size and whether a Reddit badge was found. A found badge is removed automatically, but still check the result in step 6.
@@ -66,14 +66,15 @@ For each image that needs cleaning, choose:
 - **erase** `[[x0, y0, x1, y1], …]`: rectangles painted over with the surrounding colour. (x0, y0) is the top-left corner; x1 and y1 are exclusive, so the box covers x0 to x1-1 and y0 to y1-1. Use this only for overlays sitting on a plain or nearly plain background. Add about 6 px of padding around the content.
 - If an overlay sits on detailed artwork and can't be cropped away, don't erase it (it would leave a visible patch). Tell the user and let them decide whether to keep or skip that image.
 
-All coordinates are in the **original** image's pixels, exactly as the grid shows them. Erasing happens before cropping, and the automatic Reddit removal happens after both.
+All coordinates are in the **original** image's pixels, exactly as the grid shows them. The automatic Reddit removal is also measured on the original and combined with your crop (for each edge the larger cut wins), so never crop a Reddit badge or its grey padding yourself; crop only for other content. Erase boxes are painted before cropping.
 
 ### 3. Write the captions (label = yes only)
 
 For each image:
 
 - **title**: what the picture is, in at most about 40 characters. Examples: "Barn Owl", "Just one more chapter", "The Little Prince". Use the artwork's real title if it's printed on it or you're sure of it. For a quote poster, use the quote or its first words. Don't invent facts.
-- **credit**: the artist if a signature or the source says so; otherwise where it came from (for example `r/OnyxBooxC69`); otherwise leave it empty. Don't guess artist names. An empty or missing per-image credit falls back to `--credit` if you pass one.
+- **credit**: the artist if a signature or the source says so; otherwise where it came from (for example `r/OnyxBooxC69`); otherwise leave it empty. Don't guess artist names. A franchise, film or book the picture refers to (for example *Harry Potter* or *Spirited Away*) is not a credit; put it in the title if it helps. An empty or missing per-image credit falls back to `--credit` if you pass one.
+- **One source for a batch:** if the user says where the images came from, or a source shown on some images clearly applies to all of them (for example the same subreddit and the same app's file names), use it as the credit for every image that has no artist. If you're unsure, credit only the images that showed it, and mention this in your report.
 
 If the user gave captions, use theirs.
 
@@ -99,8 +100,8 @@ Save it somewhere outside the image folder, or delete it afterwards.
 ### 5. Convert
 
 ```
-python3 c69_wallpaper.py "<path>" --label --labels labels.json --sheet
-python3 c69_wallpaper.py "<path>" --no-label --labels labels.json --sheet
+python3 "<script>" "<path>" --label --labels labels.json --sheet
+python3 "<script>" "<path>" --no-label --labels labels.json --sheet
 ```
 
 Use the first for label = yes and the second for label = no. Every converted image goes to the output folder as `<name>.png` (`<name>_<extension>.png` if two inputs share a name, such as `a.jpg` and `a.png`), and the script prints one line per image saying what it did. `--sheet` also writes `_contact_sheet.png`, a single overview of all results. To redo some images, run the same command again; it overwrites earlier results.
@@ -121,7 +122,7 @@ For a single file you can skip `labels.json` and pass `--title`, `--credit`, `--
 
 Open `_contact_sheet.png`, or the individual outputs. Check that:
 
-- No badge, handle, URL or UI is left.
+- No badge, handle, URL or UI is left, including thin leftover lines or bands at the edges of the picture.
 - Nothing important was cut off at the edges: a border, a corner ornament, part of the text. If it was, set `"mode": "fit"` for that image.
 - No erased patch is noticeable.
 - Captions are spelled correctly and not truncated (a truncated caption ends with "…").
@@ -130,7 +131,7 @@ Fix `labels.json` and run step 5 again until everything is clean.
 
 ### 7. Finish
 
-- Delete `<output folder>/_grid/`, `_contact_sheet.png` and `labels.json` unless the user wants them.
+- Delete `<output folder>/_grid/`, `_contact_sheet.png`, `labels.json` and any other files you created along the way. Keep them only if the user asked for them; when you can't ask, delete them.
 - Report: the output folder, how many images were converted, what was removed from which image, any image you skipped and why, and the captions you used, so the user can correct them.
 - To use the results on a C69 with [Reverie](https://github.com/vijaysingh-dev/reverie-c69), copy the PNGs directly into the device's `Pictures` folder.
 
