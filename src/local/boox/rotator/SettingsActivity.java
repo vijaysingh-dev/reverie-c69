@@ -59,6 +59,15 @@ public class SettingsActivity extends Activity {
         col.addView(volBtn, new LinearLayout.LayoutParams(-1, -2));
         updateVolBtn();
 
+        Button acc = new Button(this);
+        acc.setText("Open Accessibility settings");
+        acc.setOnClickListener(new View.OnClickListener() {
+            public void onClick(View v) { startActivity(new Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS)); }
+        });
+        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(-1, -2);
+        lp.topMargin = dp(32);
+        col.addView(acc, lp);
+
         ScrollView sv = new ScrollView(this);
         sv.setBackgroundColor(Color.WHITE);
         sv.addView(col);
