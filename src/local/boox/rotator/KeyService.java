@@ -19,6 +19,7 @@ import android.view.accessibility.AccessibilityEvent;
  * Also makes the side page buttons act as volume keys in chosen apps (default: Kindle, which only turns pages on
  * volume keys). Onyx's framework does the conversion whenever Settings.System "switch_key" = 1; this service flips
  * it on window changes. Writing that non-public key needs targetSdk 22 + WRITE_SETTINGS (see manifest).
+ * With "swap page buttons" on, PageKeys also sets the swapped page/volume key for the app in front.
  */
 public class KeyService extends AccessibilityService implements SharedPreferences.OnSharedPreferenceChangeListener {
     static final String PREFS = "keys";
@@ -28,7 +29,9 @@ public class KeyService extends AccessibilityService implements SharedPreference
     static final String VOL_APPS = "volApps";
     static final Set<String> DEF_VOL_APPS = new HashSet<>(java.util.Collections.singleton("com.amazon.kindle"));
     private Set<String> volApps;
+    private boolean swap;
     private int switchKey = -1;
+    private String frontPkg;
     private final HashMap<String, Boolean> isActivity = new HashMap<>();
 
     private final Handler h = new Handler(Looper.getMainLooper());
@@ -56,6 +59,8 @@ public class KeyService extends AccessibilityService implements SharedPreference
         dbl = prefs.getString(DOUBLE, DEF_DOUBLE);
         lng = prefs.getString(LONG, DEF_LONG);
         volApps = new HashSet<>(prefs.getStringSet(VOL_APPS, DEF_VOL_APPS));
+        swap = prefs.getBoolean(PageKeys.SWAP, false);
+        PageKeys.apply(this, swap, frontPkg != null && volApps.contains(frontPkg));
     }
 
     @Override public void onSharedPreferenceChanged(SharedPreferences p, String k) { load(); }
@@ -102,7 +107,12 @@ public class KeyService extends AccessibilityService implements SharedPreference
             catch (Exception ex) { act = false; }
             isActivity.put(k, act);
         }
-        if (act) setSwitchKey(volApps.contains(pkg) ? 1 : 0);
+        if (act) {
+            frontPkg = pkg;
+            boolean vol = volApps.contains(pkg);
+            setSwitchKey(vol ? 1 : 0);
+            if (swap) PageKeys.apply(this, true, vol);
+        }
     }
 
     private void setSwitchKey(int v) {

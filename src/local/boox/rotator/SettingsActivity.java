@@ -18,11 +18,12 @@ import android.widget.Spinner;
 import android.widget.TextView;
 import java.util.List;
 
-/** Plain, e-ink friendly Reverie Home screen: bottom-button single / double / long press actions, and page-buttons-as-volume apps. */
+/** Plain, e-ink friendly Reverie Home screen: bottom-button single / double / long press actions; page buttons: swap, and apps where they act as volume keys. */
 public class SettingsActivity extends Activity {
     private List<String[]> actions;
     private SharedPreferences prefs;
-    private Button volBtn;
+    private TextView volBtn;
+    private android.widget.Switch swapSw;
     private LinearLayout setup;
 
     @Override protected void onCreate(Bundle b) {
@@ -51,10 +52,37 @@ public class SettingsActivity extends Activity {
         row(col, labels, "Double press", KeyService.DOUBLE, KeyService.DEF_DOUBLE);
         row(col, labels, "Long press", KeyService.LONG, KeyService.DEF_LONG);
 
-        TextView pt = text("Page buttons as volume keys", 22, true);
-        pt.setPadding(0, dp(32), 0, dp(8));
+        TextView pt = text("Page Turn Buttons", 22, true);
+        pt.setPadding(0, dp(32), 0, 0);
         col.addView(pt);
-        volBtn = new Button(this);
+
+        // The swap label with an on/off switch on the same line.
+        LinearLayout swapRow = new LinearLayout(this);
+        swapRow.setOrientation(LinearLayout.HORIZONTAL);
+        swapRow.setGravity(Gravity.CENTER_VERTICAL);
+        swapRow.setPadding(0, dp(24), 0, 0);
+        swapRow.addView(text("Swap Next and Previous", 18, true), new LinearLayout.LayoutParams(0, -2, 1f));
+        swapSw = new android.widget.Switch(this);
+        swapSw.setOnCheckedChangeListener(new android.widget.CompoundButton.OnCheckedChangeListener() {
+            public void onCheckedChanged(android.widget.CompoundButton b, boolean on) {
+                if (on == prefs.getBoolean(PageKeys.SWAP, false)) return;
+                prefs.edit().putBoolean(PageKeys.SWAP, on).apply();
+                // Reverie is in front, so no volume keys; KeyService adjusts per app when it runs.
+                PageKeys.apply(SettingsActivity.this, on, false);
+            }
+        });
+        swapRow.addView(swapSw, new LinearLayout.LayoutParams(-2, -2));
+        col.addView(swapRow);
+
+        // Same look as the press rows: bold title, then a spinner-style field that opens the app picker.
+        TextView vt = text("Act as Volume Keys In", 18, true);
+        vt.setPadding(0, dp(24), 0, dp(4));
+        col.addView(vt);
+        volBtn = new TextView(this, null, android.R.attr.spinnerStyle);
+        volBtn.setTextColor(Color.BLACK);
+        volBtn.setTextAppearance(this, android.R.style.TextAppearance_Widget_TextView_SpinnerItem);
+        volBtn.setTextColor(Color.BLACK);
+        volBtn.setPadding(volBtn.getPaddingLeft() + dp(8), volBtn.getPaddingTop(), volBtn.getPaddingRight(), volBtn.getPaddingBottom());
         volBtn.setOnClickListener(new View.OnClickListener() { public void onClick(View v) { pickVolApps(); } });
         col.addView(volBtn, new LinearLayout.LayoutParams(-1, -2));
         updateVolBtn();
@@ -77,6 +105,8 @@ public class SettingsActivity extends Activity {
     @Override protected void onResume() {
         super.onResume();
         buildSetup();
+        swapSw.setEnabled(PageKeys.allowed(this));
+        swapSw.setChecked(prefs.getBoolean(PageKeys.SWAP, false));
     }
 
     /** Setup checklist (details in README): each missing piece gets a button. */
@@ -155,7 +185,7 @@ public class SettingsActivity extends Activity {
         for (String[] a : actions)
             if (a[0].startsWith("app:") && sel.contains(a[0].substring(4)))
                 sb.append(sb.length() == 0 ? "" : ", ").append(a[1].substring(5));
-        volBtn.setText(sb.length() == 0 ? "None (tap to choose)" : sb.toString());
+        volBtn.setText(sb.length() == 0 ? "None" : sb.toString());
     }
 
     private void pickVolApps() {

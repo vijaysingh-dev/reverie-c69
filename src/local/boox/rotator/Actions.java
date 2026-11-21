@@ -10,7 +10,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
-/** The actions a back-button press can be mapped to. Stored as strings: "none", "g:<id>", "app:<pkg>", "refresh". */
+/** The actions a back-button press can be mapped to. Stored as strings: "none", "g:<id>", "app:<pkg>", "refresh", "swap". */
 final class Actions {
     static final String NONE = "none";
 
@@ -22,6 +22,7 @@ final class Actions {
         {"g:3", "Recents"},
         {"last", "Previous app"},
         {"refresh", "Full screen refresh"},
+        {"swap", "Swap next and previous"},
         {"g:4", "Notifications"},
         {"g:5", "Quick settings"},
         {"g:9", "Screenshot"},
@@ -58,6 +59,9 @@ final class Actions {
             h.postDelayed(new Runnable() { public void run() { s.performGlobalAction(AccessibilityService.GLOBAL_ACTION_RECENTS); } }, 250);
         } else if (id.equals("refresh")) {
             s.sendBroadcast(new Intent("onyx.android.intent.action.REFRESH_SCREEN"));
+        } else if (id.equals("swap")) {
+            android.content.SharedPreferences p = s.getSharedPreferences(KeyService.PREFS, Context.MODE_PRIVATE);
+            p.edit().putBoolean(PageKeys.SWAP, !p.getBoolean(PageKeys.SWAP, false)).apply();
         } else if (id.startsWith("app:")) {
             Intent i = s.getPackageManager().getLaunchIntentForPackage(id.substring(4));
             if (i != null) s.startActivity(i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));

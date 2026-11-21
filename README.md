@@ -5,6 +5,7 @@ Reverie is a small, no-root companion app for the Onyx BOOX C69 e-reader (BOOX S
 - **Rotates the sleep and power-off images.** Each time you wake the reader, it picks the next image from your `Pictures` folder, the way a Kindle rotates its screensavers. Every image is shown once before any repeats.
 - **Adds Reverie Home.** You choose what the physical button at the bottom middle does on a single press, a double press and a long press (for example Back, Home and Recents).
 - **Turns pages in Kindle with the side buttons.** In the apps you pick, the side page buttons act as volume keys, which is the only thing the Kindle app turns pages with.
+- **Swaps the side buttons** when you want to, for example when you hold the reader in your left hand. Needs a one-time grant from a computer.
 
 It uses about 8–10 MB of RAM and does nothing between screen wakes and button presses.
 
@@ -24,15 +25,17 @@ It uses about 8–10 MB of RAM and does nothing between screen wakes and button 
 
 If you installed Reverie from somewhere other than this repository's **Releases** page, uninstall it first: long-press the Reverie icon → **Uninstall**. Otherwise the install fails with **"App not installed"**, because older copies are signed or built differently.
 
+**Updating from an earlier release** (for example 1.0.0 to 1.0.1): don't uninstall. Install the new APK over it (steps 2 and 3); your settings are kept.
+
 ### 2. Download the APK
 
-On the C69 or on a computer, open the [latest release](https://github.com/vijaysingh-dev/reverie-c69/releases/latest) and download **`Reverie-1.0.0.apk`**.
+On the C69 or on a computer, open the [latest release](https://github.com/vijaysingh-dev/reverie-c69/releases/latest) and download **`Reverie-1.0.1.apk`**.
 
 If you downloaded it on a computer, copy it to the C69 with BooxDrop, a USB cable or any file-transfer app. The `Download` folder is a good place.
 
 ### 3. Install it
 
-1. On the C69, open **Storage** → **Download** and tap **`Reverie-1.0.0.apk`**.
+1. On the C69, open **Storage** → **Download** and tap **`Reverie-1.0.1.apk`**.
    - If the file isn't listed yet, go back and open the folder again; Onyx's file index can take a moment to update.
    - If Android asks to allow installing apps from this source, allow it and go back.
 2. Tap **Install**, then **Open**.
@@ -64,6 +67,8 @@ Reverie has no reading screen to optimize, so this changes nothing visible.
 
 > Onyx's **Others → "Allow the app to run in the background"** toggle does **not** prevent the force-stop. Use the Optimization Switch.
 
+If Reverie Home is ever off, the **Open Accessibility settings** button at the bottom of Reverie's screen takes you straight to where you switch it back on.
+
 ### 6. Add your images
 
 Put your images directly in the **`Pictures`** folder. See [Adding images](#adding-images) for sizes and tips.
@@ -75,7 +80,9 @@ Then press the power button to sleep the reader, and wake it again. The image fo
 Open **Reverie** from the Apps screen:
 
 - **Reverie Home**: choose an action for **Single press**, **Double press** and **Long press** of the bottom-middle button. Defaults: Back, Home, Recents.
-- **Page buttons as volume keys**: tap the button and tick the apps where the side buttons should act as volume keys. Kindle is ticked by default.
+- **Page Turn Buttons**:
+  - **Swap Next and Previous**: switch it on to swap the two side buttons. See [Swapping the side buttons](#swapping-the-side-buttons).
+  - **Act as Volume Keys In**: tap it and tick the apps where the side buttons should act as volume keys. Kindle is ticked by default.
 
 For Kindle, also make sure the Kindle app's own **Turn pages with volume controls** setting is on. It's in the reading settings of an open book (the **Aa** menu; its exact place varies between Kindle versions).
 
@@ -121,6 +128,7 @@ The bottom-middle button can run any of these on single, double or long press:
 | Recents | Opens the recent-apps screen. |
 | Previous app | Switches to the app you used before this one. |
 | Full screen refresh | Full e-ink refresh to clear ghosting. |
+| Swap next and previous | Turns **Page Turn Buttons** → **Swap Next and Previous** on or off, without opening Reverie. |
 | Notifications | Opens the notification shade. |
 | Quick settings | Opens quick settings. |
 | Screenshot | Takes a screenshot. |
@@ -131,6 +139,24 @@ The bottom-middle button can run any of these on single, double or long press:
 Timing: a long press is 0.5 s. When **Double press** has an action, each single press waits 0.3 s to see whether a second press follows. Set Double press to **Do nothing** if you want single presses to respond instantly.
 
 Only the physical button is affected. Back on the navigation ball and in apps works as usual.
+
+---
+
+## Swapping the side buttons
+
+With **Page Turn Buttons** → **Swap Next and Previous** on, each side button does what the other one normally does, in every app: the button that turns to the next page goes back instead, and the reverse. In apps chosen under **Act as Volume Keys In** the two volume keys are swapped the same way. Long presses are not swapped.
+
+The switch is greyed out until you allow it once from a computer with [adb](https://developer.android.com/tools/adb) (USB debugging on):
+
+```
+adb shell pm grant local.boox.rotator android.permission.WRITE_SECURE_SETTINGS
+```
+
+Then reopen Reverie. The same grant also turns on [automatic re-enable](#optional-automatic-re-enable-adb). Uninstalling Reverie removes the grant, so run it again after a reinstall.
+
+To switch often, set a Reverie Home press (for example **Double press**) to **Swap next and previous**.
+
+The swap is stored in Onyx's system settings, so it stays in effect even while Reverie Home is off. **Switch it off before uninstalling Reverie**, otherwise the buttons stay swapped. To undo it after uninstalling, run `adb shell settings delete global KEYCODE_PAGE_UP` and `adb shell settings delete global KEYCODE_PAGE_DOWN`, then restart the reader.
 
 ---
 
@@ -149,7 +175,7 @@ Only the physical button is affected. Back on the navigation ball and in apps wo
 - If it still doesn't change, restart the reader. On rare occasions Onyx's launcher gets stuck applying an image; restarting clears it (or, with adb: `adb shell am force-stop com.onyx`).
 
 **The side buttons don't turn pages in Kindle.**
-- Open Reverie and check that Kindle is listed under **Page buttons as volume keys**.
+- Open Reverie and check that Kindle is listed under **Page Turn Buttons** → **Act as Volume Keys In**.
 - Check Kindle's own **Turn pages with volume controls** setting.
 - Check that **Accessibility: Reverie Home** is ✓.
 
@@ -159,7 +185,7 @@ Only the physical button is affected. Back on the navigation ball and in apps wo
 
 ## Uninstalling
 
-Long-press the Reverie icon → **Uninstall**. Your images in `Pictures` are not touched. The last sleep image stays set until you choose another one in Onyx's settings.
+If **Page Turn Buttons** → **Swap Next and Previous** is on, switch it off first. Then long-press the Reverie icon → **Uninstall**. Your images in `Pictures` are not touched. The last sleep image stays set until you choose another one in Onyx's settings.
 
 ---
 
@@ -177,10 +203,15 @@ Long-press the Reverie icon → **Uninstall**. Your images in `Pictures` are not
 - `KeyService` is an `AccessibilityService` that filters key events. It only handles the hardware Back key (events with a scan code), so the Back events it sends itself pass through untouched.
 - Actions use `performGlobalAction`. The full refresh sends `onyx.android.intent.action.REFRESH_SCREEN`, which Onyx's SystemUI handles.
 
-### Page buttons as volume keys
+### Act as volume keys
 
 - Onyx's framework (`PhoneWindowHelper.sendKeyEventBySwitch`) converts `PAGE_UP`/`PAGE_DOWN` into `VOLUME_UP`/`VOLUME_DOWN` whenever the system setting `switch_key` is `1`. On this firmware nothing sets it per app; the per-app `usePageKeyAsVolumeKey` flag in Onyx's optimization config is ignored.
 - `KeyService` watches window changes and sets `switch_key` to `1` while a chosen app is in front, and back to `0` otherwise. A normal app cannot send volume key presses to another app, so this is the only no-root route.
+
+### Swapping the side buttons
+
+- Onyx's key handler (`android.onyx.util.KeyboardEntryMap`, in `system_server`) loads its defaults from `keypad.json` in `framework-res`, then applies an override for each key from the global setting named after the key code (`KEYCODE_PAGE_UP`, `KEYCODE_PAGE_DOWN`), as JSON. It reloads on the broadcast `onyx.action.refresh_keymapping`.
+- `PageKeys` writes only `shortPressAction`, so the long-press actions stay. The stock short action `switchByConf` (page key, or volume key when `switch_key` is `1`) becomes an explicit key, so `KeyService` rewrites the pair when you move between a volume-key app and any other app. Writing global settings needs `WRITE_SECURE_SETTINGS`.
 
 ### Why the "older Android" warning
 
@@ -234,6 +265,7 @@ src/local/boox/rotator/
   Shuffler.java              shuffle bag, sends onyx.action.SCREENSAVER
   KeyService.java            Reverie Home (accessibility): button actions, switch_key per app
   Actions.java               the actions a press can run
+  PageKeys.java              swaps the side buttons (Onyx key-mapping override)
   SettingsActivity.java      the app screen: setup checklist and settings
   A11yKeeper.java            optional re-enable of Reverie Home (needs the adb grant)
 skills/c69-wallpaper/        AI-agnostic skill + script to convert images into C69 wallpapers

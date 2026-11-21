@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
-    package="local.boox.rotator" android:versionCode="16" android:versionName="1.0.0">
+    package="local.boox.rotator" android:versionCode="17" android:versionName="1.0.1">
     <uses-sdk android:minSdkVersion="22" android:targetSdkVersion="22"/>
     <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE"/>
     <!-- targetSdk 22: Android only lets pre-M apps write non-public Settings.System keys (Onyx "switch_key"). -->
